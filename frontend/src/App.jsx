@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Activity, BarChart2, TrendingUp, AlertCircle, Search, Moon, Sun } from 'lucide-react';
+import { Activity, BarChart2, TrendingUp, AlertCircle, Search, Moon, Sun, Settings } from 'lucide-react';
 import StockChart from './components/StockChart';
 import FundamentalsGrid from './components/FundamentalsGrid';
 import './index.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const DEFAULT_API = import.meta.env.VITE_API_BASE_URL || (typeof window !== 'undefined' && window.location.protocol === 'https:' ? '' : 'http://localhost:8000');
 
 const POPULAR_TICKERS = [
   { symbol: 'AAPL', name: 'Apple Inc.' },
@@ -42,6 +42,10 @@ function App() {
   const [rankingData, setRankingData] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedTicker, setSelectedTicker] = useState('');
+  const [apiUrl, setApiUrl] = useState(() => {
+    return localStorage.getItem('FINSIGHT_API_URL') || DEFAULT_API;
+  });
+  const [showSettings, setShowSettings] = useState(false);
   
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -153,6 +157,13 @@ function App() {
       return;
     }
 
+    const cleanBase = (apiUrl || '').trim().replace(/\/+$/, '');
+    if (!cleanBase) {
+      setError('Backend API URL is not set. Because this app is running on GitHub Pages, please configure your live backend URL (e.g. from Render) using the Settings icon ⚙️ above.');
+      setShowSettings(true);
+      return;
+    }
+
     setLoading(true);
     setError('');
     setData(null);
@@ -162,7 +173,7 @@ function App() {
     setRankingData(null);
     
     try {
-      const response = await axios.get(`${API_BASE}/api/analyze`, {
+      const response = await axios.get(`${cleanBase}/api/analyze`, {
         params: { ticker, start: startDate, end: endDate }
       });
       setData(response.data);
@@ -172,12 +183,12 @@ function App() {
       }
       
       // Fetch detailed data for all tickers to power the tabs
-      const fundPromises = fetchedTickers.map(t => axios.get(`${API_BASE}/api/fundamentals`, { params: { ticker: t } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
-      const btPromises = fetchedTickers.map(t => axios.get(`${API_BASE}/api/backtest`, { params: { ticker: t, start: startDate, end: endDate } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
-      const techPromises = fetchedTickers.map(t => axios.get(`${API_BASE}/api/analyze`, { params: { ticker: t, start: startDate, end: endDate } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
+      const fundPromises = fetchedTickers.map(t => axios.get(`${cleanBase}/api/fundamentals`, { params: { ticker: t } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
+      const btPromises = fetchedTickers.map(t => axios.get(`${cleanBase}/api/backtest`, { params: { ticker: t, start: startDate, end: endDate } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
+      const techPromises = fetchedTickers.map(t => axios.get(`${cleanBase}/api/analyze`, { params: { ticker: t, start: startDate, end: endDate } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
       
       // Fetch market ranking for the first ticker
-      const rankingPromise = axios.get(`${API_BASE}/api/market-ranking`, { params: { ticker: fetchedTickers[0], start: startDate, end: endDate } }).catch(() => null);
+      const rankingPromise = axios.get(`${cleanBase}/api/market-ranking`, { params: { ticker: fetchedTickers[0], start: startDate, end: endDate } }).catch(() => null);
 
       const [fundResults, btResults, techResults, rankingRes] = await Promise.all([
         Promise.all(fundPromises),
@@ -201,7 +212,11 @@ function App() {
       if (rankingRes && rankingRes.data) setRankingData(rankingRes.data);
       
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to fetch data. Ensure backend is running.');
+      if (typeof window !== 'undefined' && window.location.protocol === 'https:' && cleanBase.startsWith('http://')) {
+        setError('Mixed Content Block: GitHub Pages is HTTPS, so browsers block insecure http:// URLs. Please deploy your backend (e.g. on Render) to get an https:// URL and enter it in Settings ⚙️.');
+      } else {
+        setError(err.response?.data?.detail || 'Failed to fetch data. Ensure your backend is running and reachable.');
+      }
       setData(null);
     } finally {
       setLoading(false);
@@ -213,26 +228,86 @@ function App() {
       <header className="header" style={{ position: 'relative' }}>
         <h1>FinSight Web</h1>
         <p>Premium Stock Analysis Dashboard</p>
-        <button 
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          style={{
-            position: 'absolute', 
-            right: 0, 
-            top: 0, 
-            background: 'var(--bg-glass)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)',
-            padding: '8px',
-            borderRadius: '50%',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        <div style={{ position: 'absolute', right: 0, top: 0, display: 'flex', gap: '8px' }}>
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            title="Configure Backend API"
+            style={{
+              background: 'var(--bg-glass)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              padding: '8px',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Settings size={20} />
+          </button>
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            title="Toggle Theme"
+            style={{
+              background: 'var(--bg-glass)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              padding: '8px',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
       </header>
+
+      {showSettings && (
+        <div className="glass-panel" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>⚙️ Backend API Configuration</h3>
+            <button 
+              onClick={() => setShowSettings(false)}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.4rem', lineHeight: '1' }}
+            >
+              &times;
+            </button>
+          </div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+            When viewing this dashboard on GitHub Pages (HTTPS), the backend must be hosted online with HTTPS (e.g. on Render) so the browser can reach it.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <input 
+              type="text" 
+              placeholder="e.g. https://your-backend.onrender.com"
+              value={apiUrl}
+              onChange={(e) => {
+                const val = e.target.value.trim().replace(/\/+$/, '');
+                setApiUrl(val);
+                localStorage.setItem('FINSIGHT_API_URL', val);
+              }}
+              style={{ flex: 1, padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-glass)', color: 'var(--text-primary)' }}
+            />
+            <button 
+              className="btn" 
+              style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem' }}
+              onClick={() => {
+                localStorage.setItem('FINSIGHT_API_URL', apiUrl);
+                setShowSettings(false);
+              }}
+            >
+              Save
+            </button>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            💡 Need a free backend? Deploy your repo on <a href="https://render.com" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-color)', textDecoration: 'underline' }}>Render.com</a> as a Web Service for free.
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="error-message">
