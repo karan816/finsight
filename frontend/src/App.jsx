@@ -589,13 +589,13 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Split Normalized Performance Charts: Top 5 Gainers vs Bottom 5 Losers */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginTop: '0.5rem' }}>
+                  {/* Split Normalized Performance Charts: Top 5 Gainers vs Bottom 5 Losers (Stacked Up & Down) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '0.5rem', width: '100%' }}>
                     <div className="glass-panel" style={{ padding: '1.25rem' }}>
                       <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Trophy size={18} /> Top 5 Gainers (% Change)
                       </h4>
-                      <div style={{ height: '320px' }}>
+                      <div style={{ height: '360px', width: '100%' }}>
                         <StockChart 
                           data={rankingData.chart_data} 
                           tickers={rankingData.top_tickers || [rankingData.target, ...(rankingData.top_5 || []).map(s => s.ticker)]} 
@@ -610,7 +610,7 @@ function App() {
                       <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <TrendingDown size={18} /> Bottom 5 Losers (% Change)
                       </h4>
-                      <div style={{ height: '320px' }}>
+                      <div style={{ height: '360px', width: '100%' }}>
                         <StockChart 
                           data={rankingData.chart_data} 
                           tickers={rankingData.bottom_tickers || [rankingData.target, ...(rankingData.bottom_5 || []).map(s => s.ticker)]} 
