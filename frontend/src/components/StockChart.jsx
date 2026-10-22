@@ -82,10 +82,10 @@ const StockChart = ({ data, tickers = [], isComparison, showTechnicals, showSign
   const hasSMA200 = data.some(d => d.SMA_200 && d.SMA_200 !== 0);
 
   return (
-    <div style={{ width: '100%', minHeight: '460px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-      <div style={{ width: '100%', height: showTechnicals ? '280px' : '460px' }}>
+    <div style={{ width: '100%', height: '100%', minHeight: showTechnicals ? '580px' : '380px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ width: '100%', flex: 1, minHeight: showTechnicals ? '280px' : '340px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: showTechnicals ? 0 : 20 }}>
+          <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: showTechnicals ? 10 : 35 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
             <XAxis 
               dataKey="Date" 
@@ -100,7 +100,10 @@ const StockChart = ({ data, tickers = [], isComparison, showTechnicals, showSign
               tickFormatter={(value) => typeof value === 'number' ? (isPercent ? `${value.toFixed(1)}%` : `$${value.toFixed(2)}`) : value}
             />
             <Tooltip content={<CustomTooltip isPercent={isPercent} />} />
-            <Legend wrapperStyle={{ paddingTop: showTechnicals ? '0' : '20px' }} />
+            <Legend 
+              verticalAlign="bottom" 
+              wrapperStyle={{ paddingTop: '16px', paddingBottom: '6px' }} 
+            />
             
             {isComparison ? (
               tickers.map((t, index) => (
