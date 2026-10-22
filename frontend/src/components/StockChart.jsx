@@ -13,7 +13,27 @@ import {
   Scatter
 } from 'recharts';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+// High-contrast, vibrant unique colors for up to 20+ distinct stocks
+const COLORS = [
+  '#3b82f6', // Bright Blue
+  '#10b981', // Emerald Green
+  '#f59e0b', // Amber / Orange
+  '#8b5cf6', // Violet
+  '#ec4899', // Pink
+  '#06b6d4', // Cyan
+  '#e11d48', // Crimson Red
+  '#84cc16', // Lime Green
+  '#a855f7', // Purple
+  '#14b8a6', // Teal
+  '#f97316', // Bright Orange
+  '#6366f1', // Indigo
+  '#d946ef', // Fuchsia
+  '#eab308', // Gold Yellow
+  '#0ea5e9', // Sky Blue
+  '#22c55e', // Green
+  '#fb7185', // Rose
+  '#64748b'  // Slate Blue
+];
 
 const CustomTooltip = ({ active, payload, label, isPercent }) => {
   if (active && payload && payload.length) {

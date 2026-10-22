@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Activity, BarChart2, TrendingUp, AlertCircle, Search, Moon, Sun, Settings } from 'lucide-react';
+import { Activity, BarChart2, TrendingUp, AlertCircle, Search, Moon, Sun, Settings, Trophy, TrendingDown, LineChart } from 'lucide-react';
 import StockChart from './components/StockChart';
 import FundamentalsGrid from './components/FundamentalsGrid';
 import './index.css';
@@ -546,7 +546,9 @@ function App() {
 
                   <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '200px' }}>
-                      <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem' }}>🏆 Top 5 Gainers</h4>
+                      <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Trophy size={18} /> Top 5 Gainers
+                      </h4>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                         <thead>
                           <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -565,7 +567,9 @@ function App() {
                       </table>
                     </div>
                     <div style={{ flex: 1, minWidth: '200px' }}>
-                      <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>📉 Bottom 5 Losers</h4>
+                      <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <TrendingDown size={18} /> Bottom 5 Losers
+                      </h4>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                         <thead>
                           <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -586,7 +590,9 @@ function App() {
                   </div>
 
                   <div style={{ flex: 1, minHeight: '300px' }}>
-                    <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>📊 Normalized Performance (% Change)</h4>
+                    <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <LineChart size={18} color="var(--accent-color)" /> Normalized Performance (% Change)
+                    </h4>
                     <StockChart data={rankingData.chart_data} tickers={rankingData.chart_tickers} isComparison={true} isDarkMode={isDarkMode} isPercent={true} />
                   </div>
                 </div>
