@@ -206,10 +206,18 @@ def market_ranking(ticker: str, start: str, end: str):
         target_rank = next((i + 1 for i, s in enumerate(sorted_stocks) if s["ticker"] == target), None)
     
     # Build chart data directly from already-downloaded batch data (Zero extra network calls!)
-    chart_tickers = list(set([s["ticker"] for s in top_5 + bottom_5] + [target]))
+    top_tickers = [s["ticker"] for s in top_5]
+    if target not in top_tickers:
+        top_tickers.append(target)
+
+    bottom_tickers = [s["ticker"] for s in bottom_5]
+    if target not in bottom_tickers:
+        bottom_tickers.append(target)
+
+    all_chart_tickers = list(set(top_tickers + bottom_tickers))
     chart_df = pd.DataFrame(index=close_data.index)
     
-    for t in chart_tickers:
+    for t in all_chart_tickers:
         if t in close_data:
             series = close_data[t].dropna()
             if len(series) > 0 and series.iloc[0] > 0:
@@ -234,7 +242,9 @@ def market_ranking(ticker: str, start: str, end: str):
         "total_scanned": len(returns_list),
         "top_5": top_5,
         "bottom_5": bottom_5,
-        "chart_tickers": [t for t in chart_tickers if t in chart_df.columns],
+        "chart_tickers": [t for t in all_chart_tickers if t in chart_df.columns],
+        "top_tickers": [t for t in top_tickers if t in chart_df.columns],
+        "bottom_tickers": [t for t in bottom_tickers if t in chart_df.columns],
         "chart_data": chart_data
     }
 

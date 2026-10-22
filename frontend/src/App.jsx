@@ -589,11 +589,37 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={{ flex: 1, minHeight: '300px' }}>
-                    <h4 style={{ color: 'var(--text-secondary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <LineChart size={18} color="var(--accent-color)" /> Normalized Performance (% Change)
-                    </h4>
-                    <StockChart data={rankingData.chart_data} tickers={rankingData.chart_tickers} isComparison={true} isDarkMode={isDarkMode} isPercent={true} />
+                  {/* Split Normalized Performance Charts: Top 5 Gainers vs Bottom 5 Losers */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginTop: '0.5rem' }}>
+                    <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--success)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Trophy size={18} /> Top 5 Gainers (% Change)
+                      </h4>
+                      <div style={{ height: '320px' }}>
+                        <StockChart 
+                          data={rankingData.chart_data} 
+                          tickers={rankingData.top_tickers || [rankingData.target, ...(rankingData.top_5 || []).map(s => s.ticker)]} 
+                          isComparison={true} 
+                          isDarkMode={isDarkMode} 
+                          isPercent={true} 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="glass-panel" style={{ padding: '1.25rem' }}>
+                      <h4 style={{ color: 'var(--danger)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <TrendingDown size={18} /> Bottom 5 Losers (% Change)
+                      </h4>
+                      <div style={{ height: '320px' }}>
+                        <StockChart 
+                          data={rankingData.chart_data} 
+                          tickers={rankingData.bottom_tickers || [rankingData.target, ...(rankingData.bottom_5 || []).map(s => s.ticker)]} 
+                          isComparison={true} 
+                          isDarkMode={isDarkMode} 
+                          isPercent={true} 
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : <div style={{ color: 'var(--text-secondary)' }}>Loading market ranking...</div>
