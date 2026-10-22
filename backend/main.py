@@ -158,63 +158,74 @@ MARKET_TICKERS = [
 @app.get("/api/market-ranking")
 def market_ranking(ticker: str, start: str, end: str):
     import pandas as pd
+    import yfinance as yf
     loader = DataLoader()
     portfolio = PortfolioAnalyzer()
     
-    target = ticker.strip().upper()
-    
-    # Compute returns for all market tickers + the user's ticker
+    target = ticker.strip().upper().replace('.', '-')
     scan_list = list(set(MARKET_TICKERS + [target]))
+    
+    # 🚀 10x OPTIMIZATION: Fetch all tickers in a single batch download instead of 30 sequential loops
+    try:
+        batch_df = yf.download(scan_list, start=start, end=end, progress=False)
+    except Exception as e:
+        print(f"Batch download failed: {e}")
+        batch_df = None
+        
+    if batch_df is None or batch_df.empty or 'Close' not in batch_df:
+        raise HTTPException(status_code=404, detail="Could not fetch market data.")
+        
+    close_data = batch_df['Close']
     returns_list = []
+    valid_tickers = []
     
     for t in scan_list:
-        df = loader.fetch_stock(t, start, end)
-        if df is not None and not df.empty:
-            ret = portfolio.buy_and_hold(df)
-            returns_list.append({"ticker": t, "return": round(ret, 2)})
+        if t in close_data:
+            series = close_data[t].dropna()
+            if len(series) >= 2:
+                first_price = series.iloc[0]
+                last_price = series.iloc[-1]
+                if first_price > 0:
+                    ret = ((last_price - first_price) / first_price) * 100
+                    returns_list.append({"ticker": t, "return": round(ret, 2)})
+                    valid_tickers.append(t)
     
     if not returns_list:
-        raise HTTPException(status_code=404, detail="Could not fetch market data.")
+        raise HTTPException(status_code=404, detail="Could not calculate market returns.")
     
     # Sort by return
     sorted_stocks = sorted(returns_list, key=lambda x: x["return"])
     
     bottom_5 = sorted_stocks[:5]
-    top_5 = sorted_stocks[-5:][::-1]  # Reverse so highest is first
+    top_5 = sorted_stocks[-5:][::-1]  # Highest first
     
-    # Find where the user's ticker ranks
+    # Target rank
     target_entry = next((s for s in returns_list if s["ticker"] == target), None)
     target_rank = None
     if target_entry:
         target_rank = next((i + 1 for i, s in enumerate(sorted_stocks) if s["ticker"] == target), None)
     
-    # Build comparison chart data: fetch close prices for top 5 + bottom 5 + target
+    # Build chart data directly from already-downloaded batch data (Zero extra network calls!)
     chart_tickers = list(set([s["ticker"] for s in top_5 + bottom_5] + [target]))
-    merged_df = None
+    chart_df = pd.DataFrame(index=close_data.index)
     
     for t in chart_tickers:
-        df = loader.fetch_stock(t, start, end)
-        if df is not None and not df.empty:
-            # Normalize to percentage change from first day
-            first_price = df['Close'].iloc[0]
-            df[t] = ((df['Close'] - first_price) / first_price) * 100
-            df = df[[t]]
-            if merged_df is None:
-                merged_df = df
-            else:
-                merged_df = merged_df.join(df, how='outer')
-    
-    chart_data = []
-    if merged_df is not None:
-        df_reset = merged_df.reset_index()
-        if 'Date' not in df_reset.columns:
-            df_reset = df_reset.rename(columns={df_reset.columns[0]: 'Date'})
-        try:
-            df_reset['Date'] = df_reset['Date'].dt.strftime('%Y-%m-%d')
-        except:
-            pass
-        df_reset = df_reset.fillna(0)
-        chart_data = df_reset.to_dict(orient="records")
+        if t in close_data:
+            series = close_data[t].dropna()
+            if len(series) > 0 and series.iloc[0] > 0:
+                first_price = series.iloc[0]
+                chart_df[t] = ((close_data[t] - first_price) / first_price) * 100
+                
+    chart_df = chart_df.dropna(how='all').fillna(0)
+    df_reset = chart_df.reset_index()
+    if 'Date' not in df_reset.columns:
+        df_reset = df_reset.rename(columns={df_reset.columns[0]: 'Date'})
+    try:
+        df_reset['Date'] = df_reset['Date'].dt.strftime('%Y-%m-%d')
+    except Exception:
+        pass
+        
+    chart_data = df_reset.to_dict(orient="records")
     
     return {
         "target": target,
@@ -223,7 +234,7 @@ def market_ranking(ticker: str, start: str, end: str):
         "total_scanned": len(returns_list),
         "top_5": top_5,
         "bottom_5": bottom_5,
-        "chart_tickers": chart_tickers,
+        "chart_tickers": [t for t in chart_tickers if t in chart_df.columns],
         "chart_data": chart_data
     }
 

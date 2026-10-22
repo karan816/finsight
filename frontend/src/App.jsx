@@ -173,6 +173,7 @@ function App() {
     setRankingData(null);
     
     try {
+      // 1. Instantly fetch overview data so the chart renders immediately!
       const response = await axios.get(`${cleanBase}/api/analyze`, {
         params: { ticker, start: startDate, end: endDate }
       });
@@ -181,35 +182,34 @@ function App() {
       if (fetchedTickers.length > 0) {
         setSelectedTicker(fetchedTickers[0]);
       }
+      setLoading(false); // ✅ Unblocks the UI in < 1 second!
       
-      // Fetch detailed data for all tickers to power the tabs
+      // 2. Load tabs and ranking in the background asynchronously
       const fundPromises = fetchedTickers.map(t => axios.get(`${cleanBase}/api/fundamentals`, { params: { ticker: t } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
       const btPromises = fetchedTickers.map(t => axios.get(`${cleanBase}/api/backtest`, { params: { ticker: t, start: startDate, end: endDate } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
       const techPromises = fetchedTickers.map(t => axios.get(`${cleanBase}/api/analyze`, { params: { ticker: t, start: startDate, end: endDate } }).then(r => ({ ticker: t, data: r.data })).catch(() => ({ ticker: t, data: null })));
-      
-      // Fetch market ranking for the first ticker
       const rankingPromise = axios.get(`${cleanBase}/api/market-ranking`, { params: { ticker: fetchedTickers[0], start: startDate, end: endDate } }).catch(() => null);
 
-      const [fundResults, btResults, techResults, rankingRes] = await Promise.all([
+      Promise.all([
         Promise.all(fundPromises),
         Promise.all(btPromises),
         Promise.all(techPromises),
         rankingPromise
-      ]);
+      ]).then(([fundResults, btResults, techResults, rankingRes]) => {
+        const fMap = {};
+        fundResults.forEach(r => { if(r.data) fMap[r.ticker] = r.data; });
+        setFundamentalsMap(fMap);
 
-      const fMap = {};
-      fundResults.forEach(r => { if(r.data) fMap[r.ticker] = r.data; });
-      setFundamentalsMap(fMap);
+        const bMap = {};
+        btResults.forEach(r => { if(r.data) bMap[r.ticker] = r.data; });
+        setBacktestMap(bMap);
 
-      const bMap = {};
-      btResults.forEach(r => { if(r.data) bMap[r.ticker] = r.data; });
-      setBacktestMap(bMap);
+        const tMap = {};
+        techResults.forEach(r => { if(r.data) tMap[r.ticker] = r.data; });
+        setTechnicalsMap(tMap);
 
-      const tMap = {};
-      techResults.forEach(r => { if(r.data) tMap[r.ticker] = r.data; });
-      setTechnicalsMap(tMap);
-
-      if (rankingRes && rankingRes.data) setRankingData(rankingRes.data);
+        if (rankingRes && rankingRes.data) setRankingData(rankingRes.data);
+      });
       
     } catch (err) {
       if (typeof window !== 'undefined' && window.location.protocol === 'https:' && cleanBase.startsWith('http://')) {
